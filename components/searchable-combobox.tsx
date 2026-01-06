@@ -337,7 +337,7 @@ export function SearchableCombobox<T extends { label: string; value: string | nu
           />
         }
       >
-        <ComboboxValue placeholder={placeholder} />
+        <ComboboxValue />
         <ChevronsUpDownIcon className="-me-1!" />
       </ComboboxTrigger>
       <ComboboxPopup aria-label={placeholder}>
