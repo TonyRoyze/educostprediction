@@ -45,7 +45,19 @@ import {
   FieldContent
 } from "@/components/ui/field"
 import { cn } from "@/lib/utils"
-import { CountryCombobox, CityCombobox } from "@/components/searchable-combobox"
+import { CountryCombobox, CityCombobox, SearchableCombobox, ProgramCombobox, cities } from "@/components/searchable-combobox"
+
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+
+import { Upload, Settings, FileSpreadsheet, Eye, EyeOff, Plus, Trash2 } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 // Types for the education cost data
 interface EducationCostData {
@@ -72,7 +84,7 @@ interface FieldConfig {
   category: "location" | "program" | "cost"
   visible: boolean
   description: string
-  inputType: "text" | "number" | "select" | "country-combobox" | "city-combobox"
+  inputType: "text" | "number" | "select" | "country-combobox" | "city-combobox" | "searchable-select"
   selectOptions?: string[]
 }
 
@@ -81,7 +93,7 @@ const defaultData: EducationCostData = {
   country: "Germany",
   city: "Munich",
   university: "Technical University of Munich",
-  program: "Master of Computer Science",
+  program: "Computer Science",
   level: "Master's",
   durationYears: 2,
   tuitionUSD: 3000,
@@ -243,13 +255,70 @@ const programOptions = ['Computer Science', 'Data Science', 'Business Analytics'
   'Environmental Computing', 'Computing', 'Electronics',
   'Electronic Engineering', 'Digital Design', 'Digital Business',
   'Data Systems']
+
+const programComboboxItems = [
+  { label: "Select program", value: "" },
+  ...programOptions.map(p => ({ label: p, value: p }))
+]
+
 const levelOptions = ['Master', 'Bachelor', 'PhD']
 
 export function EducationCardBuilder() {
+  const [dataset, setDataset] = React.useState<EducationCostData[]>([defaultData])
   const [data, setData] = React.useState<EducationCostData>(defaultData)
   const [copied, setCopied] = React.useState(false)
   const [copiedCmd, setCopiedCmd] = React.useState<string | null>(null)
   const [packageManager, setPackageManager] = React.useState<"bun" | "npm" | "pnpm" | "yarn">("npm")
+  const [predictions, setPredictions] = React.useState<Record<string, number | null>>({
+    predicted_cost: null,
+    tuitionUSD: null,
+    rentUSD: null,
+    insuranceUSD: null,
+    visaFeeUSD: null
+  })
+  const [isPredicting, setIsPredicting] = React.useState(false)
+
+  // Reset prediction when data changes
+  // Auto-predict when relevant data changes
+  React.useEffect(() => {
+    if (!data.country || !data.level || !data.program || data.livingCostIndex === undefined) {
+      setPredictions({ predicted_cost: null, tuitionUSD: null, rentUSD: null, insuranceUSD: null, visaFeeUSD: null })
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      setIsPredicting(true)
+      try {
+        const res = await fetch('/api/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            Country: data.country,
+            Level: data.level,
+            Program: data.program,
+            Duration_Years: data.durationYears,
+            Living_Cost_Index: data.livingCostIndex,
+            Exchange_Rate: data.exchangeRate
+          })
+        })
+        const json = await res.json()
+        if (json.predicted_cost || json.tuitionUSD) {
+          setPredictions(json)
+        } else {
+          console.error("Prediction error:", json.error)
+          setPredictions({ predicted_cost: null, tuitionUSD: null, rentUSD: null, insuranceUSD: null, visaFeeUSD: null })
+        }
+      } catch (e) {
+        console.error("Prediction request failed:", e)
+        setPredictions({ predicted_cost: null, tuitionUSD: null, rentUSD: null, insuranceUSD: null, visaFeeUSD: null })
+      } finally {
+        setIsPredicting(false)
+      }
+    }, 600) // Debounce prediction
+
+    return () => clearTimeout(timer)
+  }, [data.country, data.level, data.program, data.livingCostIndex, data.durationYears, data.exchangeRate])
+
 
   // Student input form data (for the preview card)
   const [studentName, setStudentName] = React.useState("")
@@ -259,10 +328,10 @@ export function EducationCardBuilder() {
     { key: "country", label: "Country", icon: <MapPin className="w-4 h-4" />, type: "string", category: "location", visible: true, description: "ISO country name", inputType: "country-combobox" },
     { key: "city", label: "City", icon: <Building2 className="w-4 h-4" />, type: "string", category: "location", visible: true, description: "City location", inputType: "city-combobox" },
     { key: "university", label: "University", icon: <GraduationCap className="w-4 h-4" />, type: "string", category: "location", visible: true, description: "Institution name", inputType: "text" },
-    { key: "program", label: "Program", icon: <BookOpen className="w-4 h-4" />, type: "string", category: "program", visible: true, description: "Course/major name", inputType: "text" },
+    { key: "program", label: "Program", icon: <BookOpen className="w-4 h-4" />, type: "string", category: "program", visible: true, description: "Course/major name", inputType: "searchable-select" },
     { key: "level", label: "Level", icon: <Sparkles className="w-4 h-4" />, type: "string", category: "program", visible: true, description: "Degree level", inputType: "select", selectOptions: levelOptions },
     { key: "durationYears", label: "Duration", icon: <Clock className="w-4 h-4" />, type: "number", category: "program", visible: true, description: "Program length in years", inputType: "number" },
-    { key: "tuitionUSD", label: "Tuition", icon: <DollarSign className="w-4 h-4" />, type: "currency", category: "cost", visible: true, description: "Total tuition in USD", inputType: "number" },
+    { key: "tuitionUSD", label: "Tuition", icon: <DollarSign className="w-4 h-4" />, type: "currency", category: "cost", visible: false, description: "Total tuition in USD", inputType: "number" },
     { key: "livingCostIndex", label: "Living Cost Index", icon: <TrendingUp className="w-4 h-4" />, type: "index", category: "cost", visible: false, description: "Normalized expense index", inputType: "number" },
     { key: "rentUSD", label: "Monthly Rent", icon: <Home className="w-4 h-4" />, type: "currency", category: "cost", visible: true, description: "Average rent in USD", inputType: "number" },
     { key: "visaFeeUSD", label: "Visa Fee", icon: <Plane className="w-4 h-4" />, type: "currency", category: "cost", visible: true, description: "One-time visa fee", inputType: "number" },
@@ -278,8 +347,121 @@ export function EducationCardBuilder() {
     ))
   }
 
+  // CSV Import handler
+  const handleCsvImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string
+      const lines = text.split('\n')
+      if (lines.length < 2) return
+
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
+      const values = lines[1].split(',').map(v => v.trim())
+
+      const newDataset: EducationCostData[] = []
+
+      // Map CSV columns to data fields
+      const fieldMappings: Record<string, keyof EducationCostData> = {
+        'country': 'country',
+        'city': 'city',
+        'university': 'university',
+        'program': 'program',
+        'level': 'level',
+        'duration': 'durationYears',
+        'duration_years': 'durationYears',
+        'durationyears': 'durationYears',
+        'tuition': 'tuitionUSD',
+        'tuition_usd': 'tuitionUSD',
+        'tuitionusd': 'tuitionUSD',
+        'living_cost_index': 'livingCostIndex',
+        'livingcostindex': 'livingCostIndex',
+        'rent': 'rentUSD',
+        'rent_usd': 'rentUSD',
+        'rentusd': 'rentUSD',
+        'visa': 'visaFeeUSD',
+        'visa_fee': 'visaFeeUSD',
+        'visa_fee_usd': 'visaFeeUSD',
+        'visafeeusd': 'visaFeeUSD',
+        'insurance': 'insuranceUSD',
+        'insurance_usd': 'insuranceUSD',
+        'insuranceusd': 'insuranceUSD',
+        'exchange_rate': 'exchangeRate',
+        'exchangerate': 'exchangeRate',
+      }
+
+      // Parse each line as a new record
+      for (let i = 0; i < lines.length; i++) {
+        const rowValues = lines[i].split(',').map(v => v.trim())
+        if (rowValues.length < headers.length) continue
+
+        const record: any = { ...defaultData } // Start with defaults
+
+        headers.forEach((header, index) => {
+          const fieldKey = fieldMappings[header]
+          if (fieldKey && rowValues[index]) {
+            const field = fields.find(f => f.key === fieldKey)
+            if (field) {
+              if (field.type === 'string') {
+                record[fieldKey] = rowValues[index]
+              } else {
+                const numValue = parseFloat(rowValues[index])
+                if (!isNaN(numValue)) {
+                  record[fieldKey] = numValue
+                }
+              }
+            }
+          }
+        })
+        newDataset.push(record as EducationCostData)
+      }
+
+      if (newDataset.length > 0) {
+        setDataset(newDataset)
+        setData(newDataset[0])
+      }
+    }
+    reader.readAsText(file)
+    // Reset input
+    event.target.value = ''
+  }
+
   const updateData = (key: keyof EducationCostData, value: string | number) => {
-    setData(prev => ({ ...prev, [key]: value }))
+    // Update the currently displayed data
+    const newData = { ...data, [key]: value }
+    setData(newData)
+
+    // Also update the record in the dataset if it exists
+    // We match by a unique combination or just reference. 
+    // Ideally we should track index, but for now we'll update the matching record in dataset
+    setDataset(prev => prev.map(d =>
+      (d.university === data.university && d.program === data.program && d.level === data.level)
+        ? newData
+        : d
+    ))
+  }
+
+  const updateDatasetRow = (index: number, key: keyof EducationCostData, value: string | number) => {
+    const newDataset = [...dataset]
+    newDataset[index] = { ...newDataset[index], [key]: value }
+    setDataset(newDataset)
+    // If this row is currently displayed, update data too
+    if (JSON.stringify(dataset[index]) === JSON.stringify(data)) {
+      setData(newDataset[index])
+    }
+  }
+
+  const addRow = () => {
+    setDataset(prev => [...prev, { ...defaultData, university: "New University" }])
+  }
+
+  const removeRow = (index: number) => {
+    if (dataset.length <= 1) return
+    const newDataset = dataset.filter((_, i) => i !== index)
+    setDataset(newDataset)
+    if (index === 0) setData(newDataset[0])
   }
 
   const formatValue = (field: FieldConfig, value: string | number) => {
@@ -296,10 +478,13 @@ export function EducationCardBuilder() {
   }
 
   const calculateTotalCost = () => {
-    const yearlyLiving = data.rentUSD * 12
-    const totalCost = data.tuitionUSD + (yearlyLiving * data.durationYears) + data.visaFeeUSD + (data.insuranceUSD * data.durationYears)
+    // Living Cost = (Living Cost Index / 100) * 12000 * Duration
+    const totalLivingCost = (data.livingCostIndex / 100) * 12000 * data.durationYears
+    const totalCost = totalLivingCost + data.visaFeeUSD + (data.insuranceUSD * data.durationYears)
     return totalCost
   }
+
+
 
   const getIconName = (key: keyof EducationCostData): string => {
     const iconMap: Record<keyof EducationCostData, string> = {
@@ -363,8 +548,9 @@ export function EducationCostCard({ data, onSubmit }: EducationCostCardProps) {
   }
 
   const calculateTotalCost = () => {
-    const yearlyLiving = data.rentUSD * 12
-    return data.tuitionUSD + (yearlyLiving * data.durationYears) + data.visaFeeUSD + (data.insuranceUSD * data.durationYears)
+    // Living Cost = (Living Cost Index / 100) * 12000 * Duration
+    const totalLivingCost = (data.livingCostIndex / 100) * 12000 * data.durationYears
+    return totalLivingCost + data.visaFeeUSD + (data.insuranceUSD * data.durationYears)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -493,8 +679,26 @@ ${visibleFields.map(f => `//     ${f.key}: ${typeof data[f.key] === 'string' ? `
       return (
         <CityCombobox
           value={String(data[field.key])}
-          onValueChange={(value) => updateData(field.key, value)}
+          onValueChange={(value) => {
+            updateData(field.key, value)
+            // Auto update country if found
+            const cityData = cities.find(c => c.value === value)
+            if (cityData?.country) {
+              updateData("country", cityData.country)
+            }
+          }}
           countryFilter={data.country}
+          size="sm"
+        />
+      )
+    }
+
+    if (field.key === "program" || field.inputType === "searchable-select") {
+      return (
+        <ProgramCombobox
+          items={programComboboxItems}
+          value={String(data[field.key])}
+          onValueChange={(value: string) => updateData(field.key, value)}
           size="sm"
         />
       )
@@ -525,9 +729,9 @@ ${visibleFields.map(f => `//     ${f.key}: ${typeof data[f.key] === 'string' ? `
 
     return (
       <Input
-        type={field.inputType === "number" ? "number" : "text"}
+        type="text"
         value={data[field.key]}
-        onChange={(e) => updateData(field.key, field.inputType === "number" ? Number(e.target.value) : e.target.value)}
+        onChange={(e) => updateData(field.key, e.target.value)}
         placeholder={field.description}
       />
     )
@@ -547,15 +751,11 @@ ${visibleFields.map(f => `//     ${f.key}: ${typeof data[f.key] === 'string' ? `
               <p className="text-xs text-muted-foreground">Build education cost cards for your website</p>
             </div>
           </div>
-          {/* <Button onClick={copyCode}>
-            {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-            {copied ? "Copied!" : "Copy Code"}
-          </Button> */}
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8">
+        <div className="space-y-6">
           {/* Left Panel - Card Preview */}
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -563,10 +763,6 @@ ${visibleFields.map(f => `//     ${f.key}: ${typeof data[f.key] === 'string' ? `
                 <h2 className="text-xl font-semibold">Live Preview</h2>
                 <p className="text-sm text-muted-foreground">This is how the card will appear on your website</p>
               </div>
-              <Badge variant="outline" className="gap-1">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                Live
-              </Badge>
             </div>
 
             {/* Card Preview Container */}
@@ -576,37 +772,77 @@ ${visibleFields.map(f => `//     ${f.key}: ${typeof data[f.key] === 'string' ? `
                 {/* Part 1: Program Information */}
                 <CardHeader className="pb-4">
                   <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg leading-tight">
-                        {data.university}
-                      </CardTitle>
-                      <CardDescription className="mt-1">
-                        {data.program}
-                      </CardDescription>
+                    <div className="flex-1 space-y-3">
+                      {/* University Selection */}
+                      <div>
+                        {/* <Label className="text-xs text-muted-foreground">University</Label> */}
+                        <Select
+                          value={data.university}
+                          onValueChange={(val) => {
+                            // When uni changes, pick the first valid record for this uni
+                            const record = dataset.find(d => d.university === val)
+                            if (record) setData(record)
+                          }}
+                        >
+                          <SelectTrigger className="w-full border-none shadow-none text-lg font-bold p-0 h-auto focus:ring-0">
+                            <SelectValue>{data.university}</SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[...new Set(dataset.map(d => d.university))].map(uni => (
+                              <SelectItem key={uni} value={uni}>{uni}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="mt-1">
+                        <ProgramCombobox
+                          items={dataset
+                            .filter(d => d.university === data.university)
+                            .map(d => ({ label: d.program, value: d.program }))
+                            .filter((v, i, a) => a.findIndex(t => t.value === v.value) === i)
+                          }
+                          value={data.program}
+                          onValueChange={(val) => {
+                            const record = dataset.find(d => d.university === data.university && d.program === val)
+                            if (record) setData(record)
+                          }}
+                          className="border-none shadow-none p-0 h-auto bg-transparent hover:bg-transparent"
+                          size="sm"
+                        />
+                      </div>
                     </div>
+
+                    {/* Level Selection (Filtering based on Uni) */}
                     {visibleFields.some(f => f.key === 'level') && (
-                      <Badge variant="secondary">{data.level}</Badge>
+                      <Select
+                        value={data.level}
+                        onValueChange={(val) => {
+                          const record = dataset.find(d => d.university === data.university && d.level === val)
+                          if (record) setData(record)
+                        }}
+                      >
+                        <SelectTrigger className="w-[100px] h-7 text-xs bg-secondary border-none">
+                          <SelectValue>{data.level}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {dataset
+                            .filter(d => d.university === data.university)
+                            .map(d => d.level)
+                            .filter((v, i, a) => a.indexOf(v) === i) // Unique
+                            .map(lvl => (
+                              <SelectItem key={lvl} value={lvl}>{lvl}</SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                     )}
                   </div>
+
+                  {/* Location Info (Read Only or Derived) */}
                   {(visibleFields.some(f => f.key === 'city') || visibleFields.some(f => f.key === 'country')) && (
-                    <div className="flex items-center gap-2 mt-3">
-                      {visibleFields.some(f => f.key === 'city') && (
-                        <CityCombobox
-                          value={data.city}
-                          onValueChange={(val) => updateData('city', val)}
-                          countryFilter={data.country}
-                          size="sm"
-                          className="w-[150px]"
-                        />
-                      )}
-                      {visibleFields.some(f => f.key === 'country') && (
-                        <CountryCombobox
-                          value={data.country}
-                          onValueChange={(val) => updateData('country', val)}
-                          size="sm"
-                          className="w-[150px]"
-                        />
-                      )}
+                    <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
+                      <MapPin className="w-4 h-4" />
+                      <span>{data.city}, {data.country}</span>
                     </div>
                   )}
                 </CardHeader>
@@ -617,39 +853,248 @@ ${visibleFields.map(f => `//     ${f.key}: ${typeof data[f.key] === 'string' ? `
                     {visibleFields
                       .filter(f => ['durationYears', 'tuitionUSD', 'rentUSD', 'livingCostIndex', 'visaFeeUSD', 'insuranceUSD', 'exchangeRate'].includes(f.key))
                       .map((field) => (
-                        <div key={field.key} className="bg-muted/50 rounded-lg p-3">
+                        <div key={field.key} className="bg-muted/50 rounded-lg p-3 relative group">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-muted-foreground">{field.icon}</span>
                             <span className="text-xs text-muted-foreground">{field.label}</span>
+                            {predictions[field.key] != null && (
+                              <Sparkles className="w-3 h-3 text-green-500 animate-pulse ml-auto" />
+                            )}
                           </div>
-                          <p className="font-semibold">
-                            {formatValue(field, data[field.key])}
+                          <p className="font-semibold flex items-center gap-1">
+                            {formatValue(field, predictions[field.key] != null ? predictions[field.key]! : data[field.key])}
                           </p>
                         </div>
                       ))}
                   </div>
                   {/* Total Cost */}
                   <Separator />
-                  <div className="bg-primary/5 rounded-lg p-4">
+                  <div className="bg-primary/5 rounded-lg p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Calculator className="w-5 h-5 text-primary" />
                         <span className="font-medium">Estimated Total Cost</span>
                       </div>
-                      <span className="text-2xl font-bold text-primary">
-                        ${calculateTotalCost().toLocaleString()}
-                      </span>
+                      <div className="text-right">
+                        {isPredicting ? (
+                          <span className="text-sm text-muted-foreground animate-pulse">Calculating...</span>
+                        ) : (
+                          <span className="text-2xl font-bold text-primary">
+                            ${(predictions.predicted_cost !== null ? predictions.predicted_cost : calculateTotalCost()).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
+
+                    {predictions.predicted_cost !== null && (
+                      <div className="flex items-center justify-end gap-1 text-[10px] text-green-600 font-medium pt-1 border-t border-primary/10 tracking-tight uppercase">
+                        <Sparkles className="w-3 h-3" />
+                        <span>AI Total (Univariate)</span>
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-2 text-right">
                       Including tuition, rent, visa & insurance for {data.durationYears} {data.durationYears === 1 ? 'year' : 'years'}
                     </p>
                   </div>
-                  <p className="text-xs text-destructive mt-1">
-                    * The total cost is an estimate and may vary.
+
+                  <p className="text-xs text-destructive mt-4 italic">
+                    * The total cost is an estimated value based on AI models and regional averages.
                   </p>
                 </CardContent>
               </Card>
             </div>
+
+            {/* Data Management Section */}
+            <Card className="w-full shadow-sm">
+              <CardHeader>
+                <CardTitle>Data Management</CardTitle>
+                <CardDescription>
+                  Edit your dataset and card configuration.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="data" className="w-full">
+                  <TabsList>
+                    <TabsTrigger value="data">Data Spreadsheet</TabsTrigger>
+                    <TabsTrigger value="design">Card Design</TabsTrigger>
+                  </TabsList>
+
+                  {/* Tab 1: DATA */}
+                  <TabsContent value="data" className="space-y-4">
+                    <div className="flex items-center justify-between mt-4">
+                      <h3 className="text-lg font-medium">Dataset ({dataset.length} records)</h3>
+                      <div className="flex gap-2">
+                        <div className="relative">
+                          <Input
+                            type="file"
+                            accept=".csv"
+                            onChange={handleCsvImport}
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                          />
+                          <Button variant="outline" size="sm">
+                            <Upload className="w-4 h-4 mr-2" />
+                            Import CSV
+                          </Button>
+                        </div>
+                        <Button onClick={addRow} size="sm">
+                          <Plus className="w-4 h-4 mr-2" /> Add Row
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="border rounded-md overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[50px]"></TableHead>
+                            <TableHead className="min-w-[200px]">University</TableHead>
+                            <TableHead className="min-w-[120px]">Country</TableHead>
+                            <TableHead className="min-w-[120px]">City</TableHead>
+                            <TableHead className="min-w-[100px]">Level</TableHead>
+                            <TableHead className="min-w-[180px]">Program</TableHead>
+                            <TableHead className="min-w-[80px]">Dur.(Y)</TableHead>
+                            <TableHead className="min-w-[80px]">Liv.Idx</TableHead>
+                            <TableHead className="min-w-[80px]">Ex.Rate</TableHead>
+
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {dataset.map((row, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell>
+                                <Button variant="ghost" size="icon-xs" onClick={() => removeRow(idx)} disabled={dataset.length <= 1}>
+                                  <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                                </Button>
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input
+                                  className="h-8 border-transparent hover:border-input focus:border-input min-w-[180px]"
+                                  value={row.university}
+                                  onChange={e => updateDatasetRow(idx, 'university', e.target.value)}
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <CountryCombobox
+                                  value={row.country}
+                                  onValueChange={(val) => updateDatasetRow(idx, 'country', val)}
+                                  size="sm"
+                                  className="w-full border-transparent hover:border-input min-w-[100px]"
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <CityCombobox
+                                  value={row.city}
+                                  onValueChange={(val) => updateDatasetRow(idx, 'city', val)}
+                                  countryFilter={row.country}
+                                  size="sm"
+                                  className="w-full border-transparent hover:border-input min-w-[100px]"
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Select value={row.level} onValueChange={val => updateDatasetRow(idx, 'level', val || "Bachelor's")}>
+                                  <SelectTrigger className="h-8 border-transparent hover:border-input min-w-[90px]"><SelectValue>{row.level}</SelectValue></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Bachelor's">Bachelor's</SelectItem>
+                                    <SelectItem value="Master's">Master's</SelectItem>
+                                    <SelectItem value="PhD">PhD</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <SearchableCombobox
+                                  items={programComboboxItems}
+                                  value={row.program}
+                                  onValueChange={val => updateDatasetRow(idx, 'program', val)}
+                                  placeholder="Select program"
+                                  searchPlaceholder="Search programs..."
+                                  size="sm"
+                                  className="w-full border-transparent hover:border-input min-w-[150px]"
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input
+                                  type="text" className="h-8 w-16 border-transparent hover:border-input"
+                                  value={row.durationYears}
+                                  onChange={e => updateDatasetRow(idx, 'durationYears', parseFloat(e.target.value))}
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input
+                                  type="text" className="h-8 w-16 border-transparent hover:border-input"
+                                  value={row.livingCostIndex}
+                                  onChange={e => updateDatasetRow(idx, 'livingCostIndex', parseFloat(e.target.value))}
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input
+                                  type="text" className="h-8 w-16 border-transparent hover:border-input"
+                                  value={row.exchangeRate}
+                                  onChange={e => updateDatasetRow(idx, 'exchangeRate', parseFloat(e.target.value))}
+                                />
+                              </TableCell>
+
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </TabsContent>
+
+                  {/* Tab 2: DESIGN (Field Visibility) */}
+                  <TabsContent value="design" className="space-y-4">
+                    <div className="rounded-md border mt-4">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/50">
+                            <TableHead className="w-[50px] text-center">Show</TableHead>
+                            <TableHead className="w-[200px]">Field</TableHead>
+                            <TableHead>Preview Value (Current Card)</TableHead>
+                            <TableHead className="w-[150px]">Category</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {fields.map((field) => (
+                            <TableRow key={field.key} className="hover:bg-muted/5">
+                              <TableCell className="text-center">
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  className={cn(
+                                    "h-6 w-6",
+                                    field.visible ? "text-primary bg-primary/10 hover:bg-primary/20" : "text-muted-foreground"
+                                  )}
+                                  onClick={() => toggleField(field.key)}
+                                  title={field.visible ? "Visible on card" : "Hidden from card"}
+                                >
+                                  {field.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                                </Button>
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                <div className="flex items-center gap-2">
+                                  {field.icon}
+                                  <span>{field.label}</span>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground font-normal ml-6 truncate max-w-[120px]">
+                                  {field.description}
+                                </p>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-xs">{String(data[field.key])}</span>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="secondary" className="text-[10px] font-normal">
+                                  {field.category}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
 
             {/* Generated Code Section */}
             <Card>
@@ -795,132 +1240,8 @@ ${visibleFields.map(f => `//     ${f.key}: ${typeof data[f.key] === 'string' ? `
 
 
 
-          {/* Right Sidebar - Fields Toggle */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <LayoutGrid className="w-4 h-4" />
-                  Toggle Fields
-                </CardTitle>
-                <CardDescription>
-                  Choose which fields to display on the card
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {["location", "program", "cost"].map((category) => (
-                  <div key={category}>
-                    <h4 className="text-xs uppercase tracking-wider text-muted-foreground mb-3 font-semibold">
-                      {category}
-                    </h4>
-                    <div className="space-y-3">
-                      {fields.filter(f => f.category === category).map((field) => (
-                        <div
-                          key={field.key}
-                          className={cn(
-                            "p-3 rounded-lg transition-all border space-y-2",
-                            field.visible
-                              ? "bg-primary/5 border-primary/20"
-                              : "bg-muted/30 border-transparent"
-                          )}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <span className={field.visible ? "text-primary" : "text-muted-foreground"}>
-                                {field.icon}
-                              </span>
-                              <div>
-                                <p className={cn(
-                                  "text-sm font-medium",
-                                  !field.visible && "text-muted-foreground"
-                                )}>
-                                  {field.label}
-                                </p>
-                                <p className="text-xs text-muted-foreground">{field.description}</p>
-                              </div>
-                            </div>
-                            <Switch
-                              checked={field.visible}
-                              onCheckedChange={() => toggleField(field.key)}
-                            />
-                          </div>
-
-                          {/* Input section - Select when visible, Input when hidden */}
-                          <div className="pl-7">
-                            {field.visible ? (
-                              // When toggle is ON - show specific input type
-                              field.inputType === "country-combobox" ? (
-                                <CountryCombobox
-                                  value={String(data[field.key])}
-                                  onValueChange={(value) => updateData(field.key, value)}
-                                  size="sm"
-                                  className="w-full"
-                                />
-                              ) : field.inputType === "city-combobox" ? (
-                                <CityCombobox
-                                  value={String(data[field.key])}
-                                  onValueChange={(value) => updateData(field.key, value)}
-                                  countryFilter={data.country}
-                                  size="sm"
-                                  className="w-full"
-                                />
-                              ) : field.inputType === "select" && field.selectOptions ? (
-                                <Select
-                                  defaultValue={String(data[field.key])}
-                                  onValueChange={(value) => {
-                                    if (value) updateData(field.key, value)
-                                  }}
-                                >
-                                  <SelectTrigger className="w-full h-8 text-xs">
-                                    <SelectValue>{String(data[field.key])}</SelectValue>
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {field.selectOptions.map((option) => (
-                                      <SelectItem key={option} value={option}>
-                                        {option}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <Input
-                                  type={field.inputType === "number" ? "number" : "text"}
-                                  value={data[field.key]}
-                                  onChange={(e) => updateData(field.key, field.inputType === "number" ? Number(e.target.value) : e.target.value)}
-                                  placeholder={`Enter ${field.label.toLowerCase()}`}
-                                  className="h-8 text-xs"
-                                />
-                              )
-                            ) : (
-                              // When toggle is OFF - show input for default value
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-muted-foreground whitespace-nowrap">Default:</span>
-                                <Input
-                                  type={field.type === "string" ? "text" : "number"}
-                                  value={data[field.key]}
-                                  onChange={(e) => updateData(field.key, field.type === "string" ? e.target.value : Number(e.target.value))}
-                                  placeholder={`Default ${field.label.toLowerCase()}`}
-                                  className="h-8 text-xs flex-1"
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-              <CardFooter className="flex-col gap-2">
-                <div className="flex justify-between w-full text-sm">
-                  <span className="text-muted-foreground">Fields shown:</span>
-                  <span className="font-medium">{visibleFields.length} / {fields.length}</span>
-                </div>
-              </CardFooter>
-            </Card>
-          </div>
         </div>
       </div>
-    </div>
+    </div >
   )
 }

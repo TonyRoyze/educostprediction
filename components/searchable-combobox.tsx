@@ -321,7 +321,7 @@ export function SearchableCombobox<T extends { label: string; value: string | nu
 
   return (
     <Combobox
-      defaultValue={selectedItem}
+      value={selectedItem}
       items={items}
       onValueChange={(item) => {
         if (item && item.value && onValueChange) {
@@ -407,6 +407,30 @@ export function CityCombobox({ value, onValueChange, countryFilter, className, s
       placeholder="Select city"
       searchPlaceholder="e.g. London"
       emptyMessage="No cities found."
+      className={className}
+      size={size}
+    />
+  );
+}
+
+// Program-specific combobox
+interface ProgramComboboxProps {
+  items?: { label: string; value: string | null }[];
+  value?: string;
+  onValueChange?: (value: string) => void;
+  className?: string;
+  size?: "sm" | "default";
+}
+
+export function ProgramCombobox({ items, value, onValueChange, className, size }: ProgramComboboxProps) {
+  return (
+    <SearchableCombobox
+      items={items || []}
+      value={value}
+      onValueChange={onValueChange}
+      placeholder="Select program"
+      searchPlaceholder="e.g. Computer Science"
+      emptyMessage="No programs found."
       className={className}
       size={size}
     />
