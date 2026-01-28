@@ -7,7 +7,7 @@ import numpy as np
 import os
 
 # Define model paths
-UNIVARIATE_MODEL_PATH = "public/Gradient Boosting (Boosted Trees).pkl"
+UNIVARIATE_MODEL_PATH = "public/CatBoost.pkl"
 MULTIVARIATE_MODEL_PATH = "public/best_multivariate_cost_model.pkl"
 
 def load_pkl(path):
@@ -73,7 +73,7 @@ def predict():
             try:
                 # Features for univariate: Country, Level, Program, Living_Cost_Index
                 # (The old inspection suggested these 4)
-                uni_features = ['Country', 'Level', 'Program', 'Living_Cost_Index']
+                uni_features = ['Country', 'Living_Cost_Index', 'Exchange_Rate']
                 uni_df = df[uni_features]
                 
                 prediction = uni_model.predict(uni_df)

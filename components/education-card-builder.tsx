@@ -21,7 +21,8 @@ import {
   User,
   Mail,
   Calculator,
-  Sparkles
+  Sparkles,
+  ChevronDownIcon
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -37,13 +38,6 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select"
-import {
-  Field,
-  FieldLabel,
-  FieldDescription,
-  FieldGroup,
-  FieldContent
-} from "@/components/ui/field"
 import { cn } from "@/lib/utils"
 import { CountryCombobox, CityCombobox, SearchableCombobox, ProgramCombobox, cities } from "@/components/searchable-combobox"
 
@@ -56,7 +50,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-import { Upload, Settings, FileSpreadsheet, Eye, EyeOff, Plus, Trash2 } from "lucide-react"
+import { Upload, Eye, EyeOff, Plus, Trash2 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 // Types for the education cost data
@@ -89,139 +83,109 @@ interface FieldConfig {
 }
 
 // Default sample data
-const defaultData: EducationCostData = {
-  country: "Germany",
-  city: "Munich",
-  university: "Technical University of Munich",
-  program: "Computer Science",
-  level: "Master's",
-  durationYears: 2,
-  tuitionUSD: 3000,
-  livingCostIndex: 82.5,
-  rentUSD: 850,
-  visaFeeUSD: 75,
-  insuranceUSD: 1200,
-  exchangeRate: 0.92
-}
+const initialDataSet: EducationCostData[] = [
+  {
+    country: "Germany",
+    city: "Munich",
+    university: "Technical University of Munich",
+    program: "Computer Science",
+    level: "Master",
+    durationYears: 2,
+    tuitionUSD: 3000,
+    livingCostIndex: 82.5,
+    rentUSD: 850,
+    visaFeeUSD: 75,
+    insuranceUSD: 1200,
+    exchangeRate: 0.92
+  },
+  {
+    country: "USA",
+    city: "Stanford",
+    university: "Stanford University",
+    program: "Artificial Intelligence",
+    level: "Master",
+    durationYears: 2,
+    tuitionUSD: 62000,
+    livingCostIndex: 95.0,
+    rentUSD: 2400,
+    visaFeeUSD: 160,
+    insuranceUSD: 4500,
+    exchangeRate: 1.0
+  },
+  {
+    country: "UK",
+    city: "Oxford",
+    university: "University of Oxford",
+    program: "Physics",
+    level: "Bachelor",
+    durationYears: 3,
+    tuitionUSD: 48000,
+    livingCostIndex: 88.2,
+    rentUSD: 1200,
+    visaFeeUSD: 450,
+    insuranceUSD: 800,
+    exchangeRate: 0.79
+  },
+  {
+    country: "Switzerland",
+    city: "Zurich",
+    university: "ETH Zurich",
+    program: "Engineering",
+    level: "Master",
+    durationYears: 2,
+    tuitionUSD: 1600,
+    livingCostIndex: 100.0,
+    rentUSD: 1800,
+    visaFeeUSD: 100,
+    insuranceUSD: 2400,
+    exchangeRate: 0.88
+  },
+  {
+    country: "Singapore",
+    city: "Singapore",
+    university: "National University of Singapore",
+    program: "Data Science",
+    level: "Master",
+    durationYears: 1.5,
+    tuitionUSD: 35000,
+    livingCostIndex: 85.5,
+    rentUSD: 1500,
+    visaFeeUSD: 90,
+    insuranceUSD: 600,
+    exchangeRate: 1.34
+  },
+  {
+    country: "Canada",
+    city: "Toronto",
+    university: "University of Toronto",
+    program: "Machine Learning",
+    level: "Master",
+    durationYears: 2,
+    tuitionUSD: 42000,
+    livingCostIndex: 78.4,
+    rentUSD: 1400,
+    visaFeeUSD: 150,
+    insuranceUSD: 750,
+    exchangeRate: 1.35
+  },
+  {
+    country: "Australia",
+    city: "Melbourne",
+    university: "University of Melbourne",
+    program: "Bioinformatics",
+    level: "Master",
+    durationYears: 2,
+    tuitionUSD: 38000,
+    livingCostIndex: 81.2,
+    rentUSD: 1100,
+    visaFeeUSD: 420,
+    insuranceUSD: 900,
+    exchangeRate: 1.52
+  }
+]
 
-// Sample data for dropdowns
-const countryOptions = ['USA', 'UK', 'Canada', 'Australia', 'Germany', 'Japan',
-  'Netherlands', 'Singapore', 'France', 'Switzerland', 'Sweden',
-  'Denmark', 'China', 'South Korea', 'Ireland', 'New Zealand',
-  'Austria', 'Belgium', 'Hong Kong', 'Portugal', 'Israel', 'Taiwan',
-  'Czech Republic', 'India', 'Poland', 'Malaysia', 'Spain', 'Italy',
-  'Finland', 'Norway', 'Brazil', 'Turkey', 'Russia', 'Mexico',
-  'Greece', 'Thailand', 'UAE', 'South Africa', 'Egypt', 'Argentina',
-  'Indonesia', 'Saudi Arabia', 'Nigeria', 'Vietnam', 'Hungary',
-  'Iceland', 'Colombia', 'Romania', 'Luxembourg', 'Tunisia',
-  'Cyprus', 'Croatia', 'Dominican Republic', 'Morocco', 'Peru',
-  'Ecuador', 'Lebanon', 'Bahrain', 'Uruguay', 'Bulgaria', 'Ghana',
-  'Algeria', 'Panama', 'Bangladesh', 'Kuwait', 'Ukraine', 'Slovenia',
-  'Serbia', 'Iran', 'Uzbekistan', 'El Salvador']
-const cityOptions = ['Cambridge', 'London', 'Toronto', 'Melbourne', 'Munich', 'Tokyo',
-  'Amsterdam', 'Singapore', 'Paris', 'Zurich', 'Stockholm',
-  'Copenhagen', 'Beijing', 'Seoul', 'Dublin', 'Busan', 'Auckland',
-  'Vienna', 'Brussels', 'Ann Arbor', 'Atlanta', 'Austin', 'Bristol',
-  'Ottawa', 'Hong Kong', 'Lisbon', 'Tel Aviv', 'Taipei', 'Prague',
-  'Stanford', 'Boston', 'Oxford', 'Heidelberg', 'Basel', 'Delft',
-  'Waterloo', 'Canberra', 'Lund', 'San Diego', 'Seattle', 'Edmonton',
-  'Glasgow', 'Bangalore', 'Aalborg', 'Warsaw', 'Galway', 'Daejeon',
-  'Kuala Lumpur', 'Berkeley', 'Manchester', 'Vancouver', 'Sydney',
-  'Berlin', 'Barcelona', 'Milan', 'Rotterdam', 'Helsinki', 'Oslo',
-  'Osaka', 'Kyoto', 'Nagoya', 'Sendai', 'Fukuoka', 'Sapporo',
-  'Tsukuba', 'Kobe', 'Kanazawa', 'Hiroshima', 'Adelaide', 'Perth',
-  'Gold Coast', 'Hobart', 'Newcastle', 'Wollongong', 'Darwin',
-  'Townsville', 'Sunshine Coast', 'Armidale', 'Dresden', 'Stuttgart',
-  'Hamburg', 'Aachen', 'Karlsruhe', 'Darmstadt', 'Braunschweig',
-  'Jena', 'Hannover', 'Freiburg', 'Philadelphia', 'Chicago',
-  'Baltimore', 'Nashville', 'Durham', 'Madison', 'Tempe', 'Boulder',
-  'Minneapolis', 'Davis', 'Leeds', 'Warwick', 'Sheffield',
-  'Birmingham', 'Southampton', 'Nottingham', 'Cardiff', 'Belfast',
-  'Hamilton', 'London ON', 'Halifax', 'Victoria', 'Quebec City',
-  'Winnipeg', 'Regina', "St. John's", 'Saskatoon', 'Sherbrooke',
-  'Pittsburgh', 'Urbana-Champaign', 'Calgary', 'Sao Paulo',
-  'Istanbul', 'Moscow', 'Mexico City', 'Athens', 'Bangkok', 'Dubai',
-  'New York', 'Ithaca', 'Shenzhen', 'Cape Town', 'Cairo',
-  'Buenos Aires', 'Jakarta', 'Riyadh', 'Lagos', 'Ho Chi Minh City',
-  'Eindhoven', 'Enschede', 'Groningen', 'Maastricht', 'Nijmegen',
-  'Tilburg', 'Utrecht', 'Leiden', 'Wageningen', 'Toulouse', 'Lyon',
-  'Grenoble', 'Nice', 'Bordeaux', 'Lille', 'Rennes', 'Strasbourg',
-  'Montpellier', 'Lausanne', 'Geneva', 'Bern', 'St. Gallen',
-  'Lugano', 'Fribourg', 'Neuchatel', 'Lucerne', 'Winterthur',
-  'Aarhus', 'Shanghai', 'Hangzhou', 'Nanjing', 'Guangzhou', 'Wuhan',
-  "Xi'an", 'Chengdu', 'Daegu', 'Gwangju', 'Ulsan', 'Pohang',
-  'Incheon', 'Suwon', 'Cheongju', 'New Haven', 'Princeton',
-  'Los Angeles', 'Urbana', 'Columbus', 'West Lafayette',
-  'Gainesville', 'Raleigh', 'College Station', 'Corvallis',
-  'Edinburgh', 'Liverpool', 'Aberdeen', 'Leicester', 'Reading',
-  'Sussex', 'Essex', 'Bath', 'Surrey', 'Exeter', 'Kent', 'Dundee',
-  'Strathclyde', 'Heriot-Watt', 'Loughborough', 'Brunel',
-  'Queen Mary', 'Royal Holloway', 'Lancaster', 'Swansea', 'Aston',
-  'Hull', 'Keele', 'Plymouth', 'Portsmouth', 'Ulster', 'Northumbria',
-  'Coventry', 'Oxford Brookes', 'De Montfort', 'Westminster',
-  'Greenwich', 'Kingston', 'Montreal', 'Windsor', 'Moncton',
-  'Trois-Rivieres', 'Thunder Bay', 'Sudbury', 'Prince George',
-  'Brisbane', 'Toowoomba', 'Ballarat', 'Lismore', 'Frankfurt',
-  'Cologne', 'Bonn', 'San Francisco', 'Cork', 'Limerick', 'Maynooth',
-  'Denver', 'Waterford', 'Portland', 'Sligo', 'Athlone', 'Trondheim',
-  'Espoo', 'Bergen', 'Tampere', 'Odense', 'Tromsø', 'Turku',
-  'Stavanger', 'Oulu', 'Roskilde', 'Ås', 'Vaasa', 'Lyngby', 'Bodø',
-  'Jyväskylä', 'Kolding', 'Gjøvik', 'Lappeenranta', 'Bremen',
-  'Esbjerg', 'Kristiansand', 'Kuopio', 'Slagelse', 'Horten',
-  'Joensuu', 'Herning', 'Wellington', 'Uppsala', 'Porto',
-  'Christchurch', 'Gothenburg', 'Coimbra', 'Dunedin', 'Braga',
-  'Linköping', 'Aveiro', 'Palmerston North', 'Umeå', 'Faro',
-  'Karlstad', 'Vila Real', 'Växjö', 'Funchal', 'Madrid', 'Rome',
-  'Thessaloniki', 'Graz', 'Monterrey', 'Valencia', 'Turin', 'Patras',
-  'Linz', 'Guadalajara', 'Seville', 'Bologna', 'Heraklion',
-  'Salzburg', 'Puebla', 'Bilbao', 'Florence', 'Volos', 'Innsbruck',
-  'Queretaro', 'Granada', 'Naples', 'Ioannina', 'Klagenfurt',
-  'Merida', 'Zaragoza', 'Pisa', 'Rhodes', 'Leoben', 'Tijuana',
-  'Salamanca', 'Padua', 'Chania', 'Dornbirn', 'San Luis Potosi',
-  'Leuven', 'Budapest', 'Ankara', 'Ghent', 'Debrecen',
-  'Saint Petersburg', 'Izmir', 'Szeged', 'Novosibirsk', 'Eskisehir',
-  'Antwerp', 'Pecs', 'Kazan', 'Bursa', 'Louvain', 'Gyor', 'Tomsk',
-  'Antalya', 'Piraeus', 'Hasselt', 'Miskolc', 'Yekaterinburg',
-  'Kayseri', 'Xanthi', 'Liege', 'Veszprem', 'Samara', 'Konya',
-  'Chios', 'Mons', 'Kecskemet', 'Rostov-on-Don', 'Rio de Janeiro',
-  'Mumbai', 'Chiang Mai', 'Abu Dhabi', 'Campinas', 'Delhi',
-  'Khon Kaen', 'Alexandria', 'Sharjah', 'Porto Alegre', 'Chennai',
-  'Phuket', 'Giza', 'Ajman', 'Recife', 'Hyderabad', 'Hat Yai',
-  'Port Said', 'Al Ain', 'Florianopolis', 'Pune',
-  'Nakhon Ratchasima', 'Mansoura', 'Ras Al Khaimah', 'Salvador',
-  'Kanpur', 'Songkhla', 'Aswan', 'Fujairah', 'Reykjavik', 'Bogota',
-  'Bucharest', 'Luxembourg City', 'Akureyri', 'Medellin', 'Krakow',
-  'Cluj-Napoca', 'Esch-sur-Alzette', 'Bandung', 'Cali', 'Wroclaw',
-  'Timisoara', 'Belval', 'Yogyakarta', 'Hafnarfjordur',
-  'Barranquilla', 'Poznan', 'Iasi', 'Kirchberg', 'Surabaya',
-  'Kopavogur', 'Bucaramanga', 'Gdansk', 'Brasov', 'Differdange',
-  'Malang', 'Lodz', 'Constanta', 'Walferdange', 'Semarang',
-  'Borgarnes', 'Cartagena', 'Katowice', 'Craiova', 'Bertrange',
-  'Denpasar', 'Tunis', 'Nicosia', 'Zagreb', 'Santo Domingo', 'Rabat',
-  'Lima', 'Sfax', 'Limassol', 'Split', 'Santiago', 'Casablanca',
-  'Arequipa', 'Cordoba', 'Sousse', 'Larnaca', 'Rijeka', 'La Romana',
-  'Fez', 'Trujillo', 'Rosario', 'Monastir', 'Famagusta', 'Osijek',
-  'San Pedro', 'Marrakech', 'Cusco', 'La Plata', 'Gabes', 'Zadar',
-  'Paphos', 'Puerto Plata', 'Tangier', 'Piura', 'Mendoza', 'Bizerte',
-  'Girne', 'Dubrovnik', 'Oujda', 'Chiclayo', 'Quito', 'Beirut',
-  'Manama', 'Montevideo', 'Sofia', 'Accra', 'Algiers', 'Panama City',
-  'Guayaquil', 'Byblos', 'Riffa', 'Salto', 'Plovdiv', 'Kumasi',
-  'Oran', 'David', 'Cuenca', 'Tripoli', 'Isa Town', 'Maldonado',
-  'Varna', 'Cape Coast', 'Constantine', 'Loja', 'Jounieh', 'Sakhir',
-  'Rivera', 'Burgas', 'Tamale', 'Annaba', 'Chitré', 'Ambato',
-  'Sidon', 'Muharraq', 'Paysandu', 'Ruse', 'Ho', 'Tlemcen',
-  'La Chorrera', 'Dhaka', 'Kuwait City', 'Kyiv', 'Ljubljana',
-  'Belgrade', 'Tehran', 'Tashkent', 'San Salvador', 'Chittagong',
-  'Hawalli', 'Lviv', 'Maribor', 'Novi Sad', 'Isfahan', 'Samarkand',
-  'Santa Ana', 'Khulna', 'Al Jahra', 'Kharkiv', 'Koper', 'Nis',
-  'Mashhad', 'Bukhara', 'San Miguel', 'Rajshahi', 'Salmiya', 'Odesa',
-  'Nova Gorica', 'Kragujevac', 'Shiraz', 'Namangan', 'Sonsonate',
-  'Sylhet', 'Al Ahmadi', 'Dnipro', 'Celje', 'Subotica', 'Tabriz',
-  'Andijan', 'Santa Tecla', 'Penang', 'Jeddah', 'Johor Bahru',
-  'Dhahran', 'Kuching', 'Medina', 'MIT', 'Marseille', 'Cyberjaya',
-  'Dammam', 'Bangi', 'Taif', 'Melaka', 'Tabuk', 'Shah Alam',
-  'Makkah', 'Nilai', 'Al-Ahsa']
-const programOptions = ['Computer Science', 'Data Science', 'Business Analytics',
+const programOptions = [
+  'Computer Science', 'Data Science', 'Business Analytics',
   'Engineering', 'Mechanical Engineering', 'Information Science',
   'Artificial Intelligence', 'Finance', 'International Relations',
   'Physics', 'Sustainable Technology', 'Bioinformatics',
@@ -254,7 +218,8 @@ const programOptions = ['Computer Science', 'Data Science', 'Business Analytics'
   'Sustainable Energy', 'Machine Learning',
   'Environmental Computing', 'Computing', 'Electronics',
   'Electronic Engineering', 'Digital Design', 'Digital Business',
-  'Data Systems']
+  'Data Systems'
+]
 
 const programComboboxItems = [
   { label: "Select program", value: "" },
@@ -263,9 +228,11 @@ const programComboboxItems = [
 
 const levelOptions = ['Master', 'Bachelor', 'PhD']
 
+const defaultData = initialDataSet[0]
+
 export function EducationCardBuilder() {
-  const [dataset, setDataset] = React.useState<EducationCostData[]>([defaultData])
-  const [data, setData] = React.useState<EducationCostData>(defaultData)
+  const [dataset, setDataset] = React.useState<EducationCostData[]>(initialDataSet)
+  const [data, setData] = React.useState<EducationCostData>(dataset[0])
   const [copied, setCopied] = React.useState(false)
   const [copiedCmd, setCopiedCmd] = React.useState<string | null>(null)
   const [packageManager, setPackageManager] = React.useState<"bun" | "npm" | "pnpm" | "yarn">("npm")
@@ -320,9 +287,6 @@ export function EducationCardBuilder() {
   }, [data.country, data.level, data.program, data.livingCostIndex, data.durationYears, data.exchangeRate])
 
 
-  // Student input form data (for the preview card)
-  const [studentName, setStudentName] = React.useState("")
-  const [studentEmail, setStudentEmail] = React.useState("")
 
   const [fields, setFields] = React.useState<FieldConfig[]>([
     { key: "country", label: "Country", icon: <MapPin className="w-4 h-4" />, type: "string", category: "location", visible: true, description: "ISO country name", inputType: "country-combobox" },
@@ -331,8 +295,8 @@ export function EducationCardBuilder() {
     { key: "program", label: "Program", icon: <BookOpen className="w-4 h-4" />, type: "string", category: "program", visible: true, description: "Course/major name", inputType: "searchable-select" },
     { key: "level", label: "Level", icon: <Sparkles className="w-4 h-4" />, type: "string", category: "program", visible: true, description: "Degree level", inputType: "select", selectOptions: levelOptions },
     { key: "durationYears", label: "Duration", icon: <Clock className="w-4 h-4" />, type: "number", category: "program", visible: true, description: "Program length in years", inputType: "number" },
-    { key: "tuitionUSD", label: "Tuition", icon: <DollarSign className="w-4 h-4" />, type: "currency", category: "cost", visible: false, description: "Total tuition in USD", inputType: "number" },
-    { key: "livingCostIndex", label: "Living Cost Index", icon: <TrendingUp className="w-4 h-4" />, type: "index", category: "cost", visible: false, description: "Normalized expense index", inputType: "number" },
+    { key: "tuitionUSD", label: "Tuition", icon: <DollarSign className="w-4 h-4" />, type: "currency", category: "cost", visible: true, description: "Total tuition in USD", inputType: "number" },
+    { key: "livingCostIndex", label: "Living Cost Index", icon: <TrendingUp className="w-4 h-4" />, type: "index", category: "cost", visible: true, description: "Normalized expense index", inputType: "number" },
     { key: "rentUSD", label: "Monthly Rent", icon: <Home className="w-4 h-4" />, type: "currency", category: "cost", visible: true, description: "Average rent in USD", inputType: "number" },
     { key: "visaFeeUSD", label: "Visa Fee", icon: <Plane className="w-4 h-4" />, type: "currency", category: "cost", visible: true, description: "One-time visa fee", inputType: "number" },
     { key: "insuranceUSD", label: "Insurance", icon: <Shield className="w-4 h-4" />, type: "currency", category: "cost", visible: true, description: "Annual insurance cost", inputType: "number" },
@@ -429,13 +393,19 @@ export function EducationCardBuilder() {
   }
 
   const updateData = (key: keyof EducationCostData, value: string | number) => {
+    // If it's a numeric field, try to parse it
+    let safeValue = value
+    const field = fields.find(f => f.key === key)
+    if (field && (field.type === "number" || field.type === "currency" || field.type === "index")) {
+      const parsed = parseFloat(String(value))
+      safeValue = isNaN(parsed) ? 0 : parsed
+    }
+
     // Update the currently displayed data
-    const newData = { ...data, [key]: value }
+    const newData = { ...data, [key]: safeValue }
     setData(newData)
 
     // Also update the record in the dataset if it exists
-    // We match by a unique combination or just reference. 
-    // Ideally we should track index, but for now we'll update the matching record in dataset
     setDataset(prev => prev.map(d =>
       (d.university === data.university && d.program === data.program && d.level === data.level)
         ? newData
@@ -444,11 +414,19 @@ export function EducationCardBuilder() {
   }
 
   const updateDatasetRow = (index: number, key: keyof EducationCostData, value: string | number) => {
+    // If it's a numeric field, try to parse it
+    let safeValue = value
+    const field = fields.find(f => f.key === key)
+    if (field && (field.type === "number" || field.type === "currency" || field.type === "index")) {
+      const parsed = parseFloat(String(value))
+      safeValue = isNaN(parsed) ? 0 : parsed
+    }
+
     const newDataset = [...dataset]
-    newDataset[index] = { ...newDataset[index], [key]: value }
+    newDataset[index] = { ...newDataset[index], [key]: safeValue }
     setDataset(newDataset)
     // If this row is currently displayed, update data too
-    if (JSON.stringify(dataset[index]) === JSON.stringify(data)) {
+    if (index === dataset.findIndex(d => d === data)) {
       setData(newDataset[index])
     }
   }
@@ -465,23 +443,35 @@ export function EducationCardBuilder() {
   }
 
   const formatValue = (field: FieldConfig, value: string | number) => {
+    const numValue = typeof value === 'number' ? value : parseFloat(String(value))
+    const safeValue = isNaN(numValue) ? 0 : numValue
+
+    if (field.key === "livingCostIndex") {
+      const livingCost = (safeValue / 100) * 12000 * (data.durationYears || 0)
+      return `$${Math.round(livingCost).toLocaleString()}`
+    }
     if (field.type === "currency") {
-      return `$${Number(value).toLocaleString()}`
+      return `$${safeValue.toLocaleString()}`
     }
     if (field.type === "number" && field.key === "durationYears") {
-      return `${value} ${Number(value) === 1 ? 'year' : 'years'}`
+      return `${safeValue} ${safeValue === 1 ? 'year' : 'years'}`
     }
     if (field.type === "index") {
-      return Number(value).toFixed(2)
+      return safeValue.toFixed(2)
     }
     return String(value)
   }
 
   const calculateTotalCost = () => {
-    // Living Cost = (Living Cost Index / 100) * 12000 * Duration
-    const totalLivingCost = (data.livingCostIndex / 100) * 12000 * data.durationYears
-    const totalCost = totalLivingCost + data.visaFeeUSD + (data.insuranceUSD * data.durationYears)
-    return totalCost
+    const safeIndex = isNaN(data.livingCostIndex) ? 0 : data.livingCostIndex
+    const safeDuration = isNaN(data.durationYears) ? 0 : data.durationYears
+    const safeVisa = isNaN(data.visaFeeUSD) ? 0 : data.visaFeeUSD
+    const safeInsurance = isNaN(data.insuranceUSD) ? 0 : data.insuranceUSD
+
+    //Living Cost = (Living Cost Index / 100) * 12000 * Duration
+    const totalLivingCost = (safeIndex / 100) * 12000 * safeDuration
+    const totalCost = totalLivingCost + safeVisa + (safeInsurance * safeDuration)
+    return isNaN(totalCost) ? 0 : totalCost
   }
 
 
@@ -729,8 +719,8 @@ ${visibleFields.map(f => `//     ${f.key}: ${typeof data[f.key] === 'string' ? `
 
     return (
       <Input
-        type="text"
-        value={data[field.key]}
+        type={field.type === "string" ? "text" : "number"}
+        value={isNaN(Number(data[field.key])) ? 0 : data[field.key]}
         onChange={(e) => updateData(field.key, e.target.value)}
         placeholder={field.description}
       />
@@ -766,139 +756,149 @@ ${visibleFields.map(f => `//     ${f.key}: ${typeof data[f.key] === 'string' ? `
             </div>
 
             {/* Card Preview Container */}
-            <div className="flex justify-center p-8 bg-muted/30 rounded-xl border-2 border-dashed">
-              <Card className="w-full max-w-md overflow-hidden shadow-lg">
+            <div className="flex justify-center p-8 bg-muted/30 rounded-2xl border-2 border-dashed border-muted-foreground/20 backdrop-blur-sm">
+              <Card className="w-full max-w-md overflow-hidden shadow-2xl border-0 ring-1 ring-black/5 dark:ring-white/10">
 
                 {/* Part 1: Program Information */}
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 space-y-3">
-                      {/* University Selection */}
-                      <div>
-                        {/* <Label className="text-xs text-muted-foreground">University</Label> */}
-                        <Select
-                          value={data.university}
-                          onValueChange={(val) => {
-                            // When uni changes, pick the first valid record for this uni
-                            const record = dataset.find(d => d.university === val)
-                            if (record) setData(record)
-                          }}
-                        >
-                          <SelectTrigger className="w-full border-none shadow-none text-lg font-bold p-0 h-auto focus:ring-0">
-                            <SelectValue>{data.university}</SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {[...new Set(dataset.map(d => d.university))].map(uni => (
-                              <SelectItem key={uni} value={uni}>{uni}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                <CardHeader className="pb-6 pt-10 px-8">
+                  <div className="space-y-6">
+                    <div className="flex flex-col gap-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          {/* University Selection */}
+                          <div className="group">
+                            <Select
+                              value={data.university}
+                              onValueChange={(val) => {
+                                const record = dataset.find(d => d.university === val)
+                                if (record) setData(record)
+                              }}
+                            >
+                              <SelectTrigger className="w-full border-0 shadow-none text-2xl font-extrabold p-0 h-auto focus:ring-0 bg-transparent hover:text-primary transition-colors text-left whitespace-normal leading-tight pr-8 relative [&>svg]:hidden">
+                                <SelectValue>{data.university}</SelectValue>
+                                <ChevronDownIcon className="absolute right-0 top-1.5 w-5 h-5 text-muted-foreground/30 group-hover:text-primary transition-colors" />
+                              </SelectTrigger>
+                              <SelectContent className="max-w-[350px]">
+                                {[...new Set(dataset.map(d => d.university))].map(uni => (
+                                  <SelectItem key={uni} value={uni} className="py-2.5">{uni}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        {/* Level Selection */}
+                        {visibleFields.some(f => f.key === 'level') && (
+                          <div className="shrink-0 pt-1">
+                            <Select
+                              value={data.level}
+                              onValueChange={(val) => {
+                                const record = dataset.find(d => d.university === data.university && d.level === val)
+                                if (record) setData(record)
+                              }}
+                            >
+                              <SelectTrigger className="h-7 px-2.5 text-[10px] uppercase tracking-widest font-black bg-primary/10 text-primary border-0 rounded-full hover:bg-primary/20 transition-colors focus:ring-0 gap-1 [&>svg]:hidden leading-none">
+                                <Sparkles className="w-3 h-3" />
+                                <SelectValue>{data.level}</SelectValue>
+                              </SelectTrigger>
+                              <SelectContent align="end">
+                                {dataset
+                                  .filter(d => d.university === data.university)
+                                  .map(d => d.level)
+                                  .filter((v, i, a) => a.indexOf(v) === i)
+                                  .map(lvl => (
+                                    <SelectItem key={lvl} value={lvl}>{lvl}</SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                       </div>
 
-                      <div className="mt-1">
-                        <ProgramCombobox
-                          items={dataset
-                            .filter(d => d.university === data.university)
-                            .map(d => ({ label: d.program, value: d.program }))
-                            .filter((v, i, a) => a.findIndex(t => t.value === v.value) === i)
-                          }
-                          value={data.program}
-                          onValueChange={(val) => {
-                            const record = dataset.find(d => d.university === data.university && d.program === val)
-                            if (record) setData(record)
-                          }}
-                          className="border-none shadow-none p-0 h-auto bg-transparent hover:bg-transparent"
-                          size="sm"
-                        />
+                      <div className="flex flex-col gap-2">
+                        {/* Program Selection */}
+                        <div className="relative">
+                          <ProgramCombobox
+                            items={dataset
+                              .filter(d => d.university === data.university)
+                              .map(d => ({ label: d.program, value: d.program }))
+                              .filter((v, i, a) => a.findIndex(t => t.value === v.value) === i)
+                            }
+                            value={data.program}
+                            onValueChange={(val) => {
+                              const record = dataset.find(d => d.university === data.university && d.program === val)
+                              if (record) setData(record)
+                            }}
+                            className="p-0 h-auto bg-transparent hover:bg-muted/30 -ml-1.5 px-1.5 py-0.5 rounded-md transition-all text-muted-foreground hover:text-foreground w-full font-semibold border-0 shadow-none ring-0"
+                            size="sm"
+                            hideIcon
+                            variant="ghost"
+                          />
+                        </div>
+
+                        {/* Location Info */}
+                        {(visibleFields.some(f => f.key === 'city') || visibleFields.some(f => f.key === 'country')) && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground/60 font-medium">
+                            <MapPin className="w-4 h-4 text-primary/40" />
+                            <span>{data.city}, {data.country}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
-
-                    {/* Level Selection (Filtering based on Uni) */}
-                    {visibleFields.some(f => f.key === 'level') && (
-                      <Select
-                        value={data.level}
-                        onValueChange={(val) => {
-                          const record = dataset.find(d => d.university === data.university && d.level === val)
-                          if (record) setData(record)
-                        }}
-                      >
-                        <SelectTrigger className="w-[100px] h-7 text-xs bg-secondary border-none">
-                          <SelectValue>{data.level}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {dataset
-                            .filter(d => d.university === data.university)
-                            .map(d => d.level)
-                            .filter((v, i, a) => a.indexOf(v) === i) // Unique
-                            .map(lvl => (
-                              <SelectItem key={lvl} value={lvl}>{lvl}</SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    )}
                   </div>
-
-                  {/* Location Info (Read Only or Derived) */}
-                  {(visibleFields.some(f => f.key === 'city') || visibleFields.some(f => f.key === 'country')) && (
-                    <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
-                      <MapPin className="w-4 h-4" />
-                      <span>{data.city}, {data.country}</span>
-                    </div>
-                  )}
                 </CardHeader>
 
                 <CardContent className="space-y-4">
                   {/* Cost Breakdown */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-4">
                     {visibleFields
                       .filter(f => ['durationYears', 'tuitionUSD', 'rentUSD', 'livingCostIndex', 'visaFeeUSD', 'insuranceUSD', 'exchangeRate'].includes(f.key))
                       .map((field) => (
-                        <div key={field.key} className="bg-muted/50 rounded-lg p-3 relative group">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-muted-foreground">{field.icon}</span>
-                            <span className="text-xs text-muted-foreground">{field.label}</span>
+                        <div key={field.key} className="bg-muted/50 dark:bg-muted/30 rounded-xl p-4 relative group hover:bg-muted transition-all border border-transparent hover:border-primary/10 hover:shadow-sm">
+                          <div className="flex items-center gap-2.5 mb-2">
+                            <span className="text-primary/60 group-hover:text-primary transition-colors">{field.icon}</span>
+                            <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground/70 group-hover:text-muted-foreground transition-colors">
+                              {field.key === "livingCostIndex" ? "Living Cost" : field.label}
+                            </span>
                             {predictions[field.key] != null && (
-                              <Sparkles className="w-3 h-3 text-green-500 animate-pulse ml-auto" />
+                              <Sparkles className="w-3 h-3 text-primary animate-pulse ml-auto" />
                             )}
                           </div>
-                          <p className="font-semibold flex items-center gap-1">
+                          <p className="text-base font-bold tracking-tight">
                             {formatValue(field, predictions[field.key] != null ? predictions[field.key]! : data[field.key])}
                           </p>
                         </div>
                       ))}
                   </div>
                   {/* Total Cost */}
-                  <Separator />
-                  <div className="bg-primary/5 rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Calculator className="w-5 h-5 text-primary" />
-                        <span className="font-medium">Estimated Total Cost</span>
+                  <div className="relative overflow-hidden rounded-2xl bg-primary px-6 py-5 text-primary-foreground shadow-lg">
+                    <div className="relative z-10 flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2 opacity-90">
+                          <Calculator className="w-4 h-4" />
+                          <span className="text-xs font-bold uppercase tracking-wider">Estimated Total</span>
+                        </div>
+                        <p className="text-[10px] opacity-70 leading-tight">Incl. tuition, rent, visa & insurance</p>
                       </div>
                       <div className="text-right">
                         {isPredicting ? (
-                          <span className="text-sm text-muted-foreground animate-pulse">Calculating...</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium animate-pulse">Calculating...</span>
+                          </div>
                         ) : (
-                          <span className="text-2xl font-bold text-primary">
+                          <span className="text-3xl font-black tracking-tighter">
                             ${(predictions.predicted_cost !== null ? predictions.predicted_cost : calculateTotalCost()).toLocaleString()}
                           </span>
                         )}
                       </div>
                     </div>
-
-                    {predictions.predicted_cost !== null && (
-                      <div className="flex items-center justify-end gap-1 text-[10px] text-green-600 font-medium pt-1 border-t border-primary/10 tracking-tight uppercase">
-                        <Sparkles className="w-3 h-3" />
-                        <span>AI Total (Univariate)</span>
-                      </div>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-2 text-right">
-                      Including tuition, rent, visa & insurance for {data.durationYears} {data.durationYears === 1 ? 'year' : 'years'}
-                    </p>
+                    {/* Subtle Background Pattern */}
+                    <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
+                    <div className="absolute bottom-0 left-0 -ml-4 -mb-4 w-24 h-24 bg-black/10 rounded-full blur-2xl" />
                   </div>
 
-                  <p className="text-xs text-destructive mt-4 italic">
-                    * The total cost is an estimated value based on AI models and regional averages.
+                  <p className="text-[10px] text-muted-foreground/60 text-center pt-2">
+                    * Values estimated using multivariate regression models
                   </p>
                 </CardContent>
               </Card>
@@ -991,11 +991,11 @@ ${visibleFields.map(f => `//     ${f.key}: ${typeof data[f.key] === 'string' ? `
                                 />
                               </TableCell>
                               <TableCell className="p-1">
-                                <Select value={row.level} onValueChange={val => updateDatasetRow(idx, 'level', val || "Bachelor's")}>
+                                <Select value={row.level} onValueChange={val => updateDatasetRow(idx, 'level', val || "Bachelor")}>
                                   <SelectTrigger className="h-8 border-transparent hover:border-input min-w-[90px]"><SelectValue>{row.level}</SelectValue></SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="Bachelor's">Bachelor's</SelectItem>
-                                    <SelectItem value="Master's">Master's</SelectItem>
+                                    <SelectItem value="Bachelor">Bachelor</SelectItem>
+                                    <SelectItem value="Master">Master</SelectItem>
                                     <SelectItem value="PhD">PhD</SelectItem>
                                   </SelectContent>
                                 </Select>
@@ -1013,23 +1013,23 @@ ${visibleFields.map(f => `//     ${f.key}: ${typeof data[f.key] === 'string' ? `
                               </TableCell>
                               <TableCell className="p-1">
                                 <Input
-                                  type="text" className="h-8 w-16 border-transparent hover:border-input"
-                                  value={row.durationYears}
-                                  onChange={e => updateDatasetRow(idx, 'durationYears', parseFloat(e.target.value))}
+                                  type="number" className="h-8 w-16 border-transparent hover:border-input"
+                                  value={isNaN(Number(row.durationYears)) ? 0 : row.durationYears}
+                                  onChange={e => updateDatasetRow(idx, 'durationYears', e.target.value)}
                                 />
                               </TableCell>
                               <TableCell className="p-1">
                                 <Input
-                                  type="text" className="h-8 w-16 border-transparent hover:border-input"
-                                  value={row.livingCostIndex}
-                                  onChange={e => updateDatasetRow(idx, 'livingCostIndex', parseFloat(e.target.value))}
+                                  type="number" className="h-8 w-16 border-transparent hover:border-input"
+                                  value={isNaN(Number(row.livingCostIndex)) ? 0 : row.livingCostIndex}
+                                  onChange={e => updateDatasetRow(idx, 'livingCostIndex', e.target.value)}
                                 />
                               </TableCell>
                               <TableCell className="p-1">
                                 <Input
-                                  type="text" className="h-8 w-16 border-transparent hover:border-input"
-                                  value={row.exchangeRate}
-                                  onChange={e => updateDatasetRow(idx, 'exchangeRate', parseFloat(e.target.value))}
+                                  type="number" className="h-8 w-16 border-transparent hover:border-input"
+                                  value={isNaN(Number(row.exchangeRate)) ? 0 : row.exchangeRate}
+                                  onChange={e => updateDatasetRow(idx, 'exchangeRate', e.target.value)}
                                 />
                               </TableCell>
 
