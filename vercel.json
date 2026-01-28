@@ -1,0 +1,15 @@
+{
+  "functions": {
+    "api/predict.py": {
+      "runtime": "python3.11",
+      "maxDuration": 30,
+      "includeFiles": "public/*.pkl"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/predict",
+      "destination": "/api/predict"
+    }
+  ]
+}
